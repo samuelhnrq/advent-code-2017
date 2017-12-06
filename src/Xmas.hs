@@ -1,10 +1,11 @@
 module Xmas
 (
   getDay,
-  getCoords
+  countSteps
 ) where
-import           Data.List   (nub, sort)
-import           Debug.Trace (trace)
+import           Data.List     (nub, sort)
+import qualified Data.Sequence as S
+import           Debug.Trace   (trace)
 
 dummy :: String -> Int
 dummy _ = -1
@@ -14,6 +15,7 @@ getDay 1 = (globalSolve 1, \inp -> globalSolve (length inp `div` 2) inp)
 getDay 2 = (calcSpreadSheet, calcSheetDiv)
 getDay 3 = (calcMoves, dummy)
 getDay 4 = (checkPass, checkPass2)
+getDay 5 = (stepsOff, dummy)
 getDay _ = (dummy, dummy)
 
 
@@ -68,10 +70,38 @@ checkPass = length . filter (validRow . words) . lines
 checkPass2 :: String -> Int
 -- Same as before but sort each 'word' alphabetically before checking the row
 -- Two aplhabetically sorted anagrams are the same thing
-checkPass2 = length . filter (validRow. map sort . words) . lines
+checkPass2 = length . filter (validRow . map sort . words) . lines
 
 validRow :: (Eq a) => [a] -> Bool
 validRow [] = True
 validRow (x : xs)
   | x `elem` xs = False
   | otherwise = validRow xs
+
+
+-- ================= FIFTH DAY OF CHRISTIMAS! =================
+stepsOff :: String -> Int
+stepsOff xs = countSteps 0 nums
+  where nums = S.fromList $ map read $ filter (/= "") $ lines xs :: S.Seq Int
+
+stepsOff2 :: String -> Int
+stepsOff2 xs = countSteps2 0 nums
+  where nums = S.fromList $ map read $ filter (/= "") $ lines xs :: S.Seq Int
+
+countSteps :: Int -> S.Seq Int -> Int
+countSteps x xs
+  | x >= S.length xs || x < 0 = 0
+  | otherwise =
+    let curr = S.index xs x
+        prox = x + curr
+        updt = S.update x (curr + 1) xs in
+    1 + countSteps prox updt
+
+countSteps2 :: Int -> S.Seq Int -> Int
+countSteps2 x xs
+  | x >= S.length xs || x < 0 = 0
+  | otherwise =
+    let curr = S.index xs x
+        prox = x + curr
+        updt = S.update x (if curr >= 3 then curr - 1 else curr + 1) xs in
+    1 + countSteps2 prox updt
