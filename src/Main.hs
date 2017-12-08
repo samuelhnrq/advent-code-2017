@@ -1,25 +1,33 @@
 module Main where
-import           Data.Char          (isSpace)
-import           Data.Time          (diffUTCTime, getCurrentTime)
-import           System.Environment (getArgs)
-import           System.IO          (hFlush, stdin, stdout)
-import           Xmas               (getDay)
+import           Control.Monad         (when)
+import           Data.Char             (isSpace, toLower)
+import           Data.List
+import           Data.Time.Clock.POSIX (getPOSIXTime)
+import           System.Environment    (getArgs)
+import           System.IO             (hFlush, stdin, stdout)
+import           Xmas                  (getDay)
 
 main :: IO ()
 main = do
   args <- getArgs
-  inp <- if null args then do
+  inp <- read <$> (if null args then do
     putStr "Which millisecond to remember?\n=> "
     _ <- hFlush stdout
-    readLn :: IO Int
+    getLine
   else
-    (return . read . head) args
-  millisChristimas inp
-
-millisChristimas :: Int -> IO ()
-millisChristimas x = do
-  fileStr <- readFile $ "xmas" ++ show x ++ ".txt"
-  let inp = reverse $ dropWhile isSpace $ reverse fileStr
-  let (d1, d2) = getDay x
-  putStrLn $ "The answer for the first and second part, are, respectivily:\n"
-    ++ show (d1 inp) ++ "\n" ++ show (d2 inp)
+    (return . head) args)
+  fileStr <- dropWhileEnd isSpace
+    <$> readFile ("input/xmas" ++ show inp ++ ".txt")
+  let part = toLower (if length args >= 2 then head (args !! 1) else 'b')
+      (d1, d2) = getDay inp
+      answers = [d1 fileStr, d2 fileStr]
+      partIs a = part == l || part == 'b' where l = toLower a
+  iTime <- getPOSIXTime
+  let showDuration = subtract iTime <$> getPOSIXTime >>= print
+      showRes x = do
+        putStrLn $"The answer of the " ++ show (x + 1) ++ "# part is:"
+        print (answers !! x)
+        putStr "It took "
+        showDuration
+  when (partIs 'f') $ showRes 0
+  when (partIs 's') $ showRes 1
