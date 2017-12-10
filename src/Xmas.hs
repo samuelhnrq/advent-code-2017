@@ -1,14 +1,14 @@
- module Xmas
+{-# LANGUAGE FlexibleContexts #-}
+module Xmas
 (
   getDay,
   countSteps
 ) where
-import           Control.Monad.Loops
 import           Control.Monad.ST
-import           Data.Array.ST       as S
-import           Data.List           (nub, sort)
-import           Data.STRef
-import           Debug.Trace         (trace)
+import qualified Data.Array.Base  as B
+import qualified Data.Array.ST    as S
+import           Data.List        (sort)
+--import           Debug.Trace         (trace)
 
 dummy :: String -> Int
 dummy _ = -1
@@ -26,7 +26,7 @@ getDay _ = (dummy, dummy)
 globalSolve :: Int -> String -> Int
 globalSolve off xs = sum $ zipEq xs $ drop off inf
   where inf = cycle xs
-        zipEq xs ys = [read [x] | (x, y) <- zip xs ys, x == y]
+        zipEq zs ys = [read [x] | (x, y) <- zip zs ys, x == y]
 
 
 -- ================= SECOND DAY OF CHRISTIMAS! =================
@@ -57,11 +57,14 @@ getCoords x
   | x > (end - side * 2) = ((0, (end - side) - x), center)
   | x > (end - side * 3) = (((end - (side * 2)) - x, side), center)
   | x > (end - side * 4) = ((side, (end - (side * 3)) - x), center)
+  | otherwise = (center, center)
   where
-    end = head $ dropWhile (< x) [y ^ 2 |
-      let n = (ceiling . sqrt . realToFrac) x, y <- [n..], odd y]
-    side = round $ sqrt (realToFrac end) - 1
-    center = let half = floor (realToFrac side / 2) in (half, half)
+    toDouble = realToFrac :: Int -> Double
+    end = head $ dropWhile (< x) [y ^ (2 :: Int) |
+      let n = (ceiling . sqrt . toDouble) x,
+      y <- [n..], odd y]
+    side = round $ sqrt (toDouble end) - 1
+    center = let half = floor (toDouble side / 2) in (half, half)
 
 
 -- ================= FOURTH DAY OF CHRISTIMAS! =================
@@ -85,10 +88,11 @@ validRow (x : xs)
 -- ================= FIFTH DAY OF CHRISTIMAS! =================
 stepsOff :: Int -> String -> Int
 stepsOff n xs = case n of
-    2 -> countSteps (\z -> if z >= 3 then z - 1 else z + 1) inpt
+    2 -> countSteps (\z -> z + (if z >= 3 then -1 else 1)) inpt
     1 -> countSteps (+1) inpt
+    _ -> 0
   where
-    inpt = map read $ filter (/= "") $ lines xs
+    inpt = map read $ lines xs
 
 -- This function was quite the monadic adventure, I didn't literally
 -- spent the entirity of the 3 days making this function but  inderectly
@@ -97,15 +101,20 @@ stepsOff n xs = case n of
 countSteps :: (Int -> Int) -> [Int] -> Int
 countSteps rule xs = runST $ do
   let siz = (0, length xs)
-  arr <- S.newListArray siz xs :: ST s (STUArray s Int Int)
-  ind <- newSTRef 0
-  ttl <- newSTRef 0
-  whileM_ (S.inRange siz <$> readSTRef ind) (do
-      i <- readSTRef ind
-      curr <- S.readArray arr i
-      _ <- writeArray arr i (rule curr)
-      _ <- modifySTRef' ttl (+1)
-      writeSTRef ind (i+curr))
-  subtract 2 <$> readSTRef ttl
+  arr <- S.newListArray siz xs :: ST s (S.STUArray s Int Int)
+  let manySteps ind ttl
+        | S.inRange siz ind = do
+          curr <- B.unsafeRead arr ind
+          _ <- B.unsafeWrite arr ind $! rule curr
+          manySteps (ind + curr) $! (ttl + 1)
+        | otherwise = return ttl
+  subtract 2 <$> manySteps 0 0
+
 
 -- ================= SIXTH DAY OF CHRISTIMAS! =================
+-- evenBanks :: String -> Int
+-- evenBanks xs = runST $ do
+--   let origBanks = (map read . words) xs
+--       siz = (0, length origBanks)
+--   banks <- S.newListArray siz origBanks :: ST s (S.STUArray s Int Int)
+--   return 1

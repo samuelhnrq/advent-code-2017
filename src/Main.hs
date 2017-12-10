@@ -4,7 +4,7 @@ import           Data.Char             (isSpace, toLower)
 import           Data.List
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import           System.Environment    (getArgs)
-import           System.IO             (hFlush, stdin, stdout)
+import           System.IO             (hFlush, stdout)
 import           Xmas                  (getDay)
 
 main :: IO ()
